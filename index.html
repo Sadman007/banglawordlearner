@@ -1,0 +1,126 @@
+<head style='height:100%'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <link href="css/test.css" rel="stylesheet" >
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+    <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+    
+    <title>সাইন ইন</title>
+      <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+    <script src="https://www.gstatic.com/firebasejs/live/3.1/firebase.js"></script>
+
+    <script>
+        function showLogin(){
+            var x = document.getElementById('login_div');
+            x.style.display = 'block';
+            var x = document.getElementById('signup_div');
+            x.style.display = 'none';
+        }
+        function showSignUp(){
+            var x = document.getElementById('login_div');
+            x.style.display = 'none';
+            var x = document.getElementById('signup_div');
+            x.style.display = 'block';
+        }
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prefixfree/1.0.7/prefixfree.min.js"></script>
+    <script src="addDistrict.js"></script>
+    
+</head>    
+<!------ Include the above in your HEAD tag ---------->
+<body style='height: 100%;
+    margin: 0;
+    background-repeat: no-repeat;
+    background-attachment: fixed;'>
+    <div id="signup_div" class="container child" style='display: none;'>
+    <div class="row">
+      <div class="panel panel-primary">
+        <div class="panel-body">
+          
+            <div class="form-group">
+              <h2>Bangla Word Learner</h2>
+            </div>
+            <!--<div class="form-group">
+              <label class="control-label" for="signupName">Full name</label>
+              <input id="signupName" type="text" maxlength="50" class="form-control">
+            </div>-->
+                        <div class="form-group">
+              <label class="control-label" >পূর্ণনাম</label>
+              <input id="txtFullName_signup" type="text" maxlength="50" class="form-control" placeholder="আপনার পূর্ণনাম দিন">
+            </div>
+            <div class="form-group">
+              <label class="control-label" for="signupEmail">ই-মেইল</label>
+              <input id="txtEmail_signup" type="email" maxlength="50" class="form-control" placeholder="আপনার ই-মেইল দিন">
+            </div>
+            <div class="form-group">
+              <label class="control-label" for="signupPassword">পাসওয়ার্ড</label>
+              <input id="txtPassword_signup" type="password" maxlength="25" class="form-control" placeholder="ন্যূনতম ছয় অক্ষর" length="40">
+            </div>
+                        <div class="form-group">
+                              <label for="sel1">লিঙ্গ নির্বাচন করুন:</label>
+                              <select id="txtGender" class="form-control" id="sel1">
+                                <option>Male</option>
+                                <option>Female</option>
+                              </select>
+                        </div>
+                        <div class="form-group">
+                              <label >বয়স:</label>
+                              <input id="txtAge" class='form-control' type='number' placeholder="বয়স নির্বাচন করুন">     
+                        </div>
+                        <div class="form-group">
+                              <label for="sel1">জেলা:</label>
+                              <select id="txtEthnicity" class="form-control" id="txtEthnicity">
+                              </select>
+                              <script>addDistrict();</script>
+                        </div>
+                        
+                        <div class="form-group">
+                              <label class="control-label" for="signupPermission">লিডারবোর্ড এ নিজেকে দেখতে চান?</label>
+                              <input class="checkbox-inline" id="boxPermission_signup" type="checkbox"> হ্যা চাই<br>
+                        </div>
+                      
+            <div class="form-group">
+              <button id="btnSignUp" type="submit" class="btn btn-info btn-block">সাইন আপ</button>
+            </div>
+            <hr>
+            <p>ইতোমধ্যে একাউন্ট খুলেছেন? <a href="#" type='submit' onclick="showLogin()">সাইন ইন</a></p>
+            <p>(ডাটাসেট উন্মুক্ত করার সময় আপনার কোন ব্যাক্তিগত তথ্য শেয়ার করা হবে না)<p>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+    <div class="container child" id="login_div">
+    <div class="row">
+      <div class="panel panel-primary">
+        <div class="panel-body">
+          
+            <div class="form-group">
+              <h2>Bangla Word Learner</h2>
+            </div>
+            <!--<div class="form-group">
+              <label class="control-label" for="signupName">Full name</label>
+              <input id="signupName" type="text" maxlength="50" class="form-control">
+            </div>-->
+            <div class="form-group">
+              <label class="control-label">ই-মেইল</label>
+              <input id="txtEmail_login" type="email" maxlength="50" class="form-control" placeholder="enter your email">
+            </div>
+            <div class="form-group">
+              <label class="control-label" >পাসওয়ার্ড</label>
+              <input id="txtPassword_login" type="password" maxlength="25" class="form-control" placeholder="at least 6 characters" length="40">
+            </div>
+                        
+            <div class="form-group">
+              <button id="btnLogin" type="submit" class="btn btn-info btn-block">সাইন ইন</button>
+            </div>
+            <hr>
+            <p>একাউন্ট খুলতে চান? <a href="#" type='submit' onclick="showSignUp()">সাইন আপ</a></p>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+    <script src="app.js"></script>
+</body>

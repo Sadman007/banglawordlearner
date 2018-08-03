@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <!--<style>
+        .custom {
+            width: 12vw !important;
+        }
+    </style>
+-->
+    <title>হোম । লাইভ রেকর্ডিং এবং প্লে-ব্যাক</title>
+    <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/4.1.5/firebase.js"></script>
+    <script src="recorder.js"></script>
+    <script src="fileRead.js"></script>
+    <script>
+        var playing = false;
+        var sz = 38;
+        var index = Math.floor(Math.random() * sz);
+        var currentFileName = "";
+        var cnt = 0;
+        var snd = new Audio("beep.wav");
+        var index_arr = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37];
+
+        function shuffle(a) {
+            var j, x, i;
+            for (i = a.length - 1; i > 0; i--) {
+                j = Math.floor(Math.random() * (i + 1));
+                x = a[i];
+                a[i] = a[j];
+                a[j] = x;
+            }
+            return a;
+        }
+        index_arr = shuffle(index_arr);
+        function getRndInteger(min, max) {
+                return Math.floor(Math.random() * (max - min) ) + min;
+            }
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        function CheckTextbox(boxID) {
+                var textbox = document.getElementById(boxID);
+
+            if (textbox.disabled) {
+            // If disabled, do this 
+            console.log("disabled");
+            } else {
+       // Enter code here
+            console.log("enabled");
+                }
+            }
+
+        function next() {
+            index = index_arr[cnt];
+            cnt++;
+            if(cnt>=38) 
+            {
+                index_arr = shuffle(index_arr);
+                cnt = 0;
+            }
+            //index = getRndInteger(0,38);
+             //console.log(index + " -_- " + cnt);      
+            recordingslist.innerHTML = "";
+            loadText("showText", index);
+        }
+
+        function logout() {
+            firebase.auth().signOut();
+        }
+
+        function writeFileToUser(filename) {
+
+            userId = firebase.auth().currentUser.uid;
+            if (filename !== "") {
+                firebase.database().ref('sadman/users/' + userId + '/files/' + index).push(
+                    filename
+                ).catch(e => alert(e))
+                ;
+                firebase.database().ref('sadman/users/' + userId + '/latest').set({
+                    index: index
+                }).catch(e => alert(e));
+            }
+
+        }
+
+        function startUserMedia(stream) {
+            var input = audio_context.createMediaStreamSource(stream);
+            __log('Media stream created.');
+
+            // Uncomment if you want the audio to feedback directly
+            //input.connect(audio_context.destination);
+            //__log('Input connected to audio context destination.');
+
+            recorder = new Recorder(input);
+            __log('Recorder initialised.');
+        }
+
+
+        function startRecording(button) {
+            
+           // button.disabled = true;
+           snd.play();
+
+            document.getElementById("nextButton").disabled = true;
+            document.getElementById("startRecordingButton").disabled = true;
+
+            
+            setTimeout(function(){ 
+                 document.getElementById("status").innerHTML = "<span style='color: green'>Recording, Please start speaking...</span>";
+            playing = true;
+            recorder && recorder.record();
+            //button.nextElementSibling.disabled = false;
+            recordingslist.innerHTML = "";
+            __log('Recording...');
+            
+            setTimeout(function () {
+                if (playing)
+                    stopRecording(document.getElementById('stopRecordingButton') );
+            }, 2200);
+            }, 550);  
+        }
+
+        function stopRecording(button) {
+             //document.getElementById("rec_notice").style.display = "center";
+
+            document.getElementById("status").innerHTML = "<span style='color: red'>Recording Stopped</span>";
+
+            recorder && recorder.stop();
+            playing = false;
+            button.disabled = true;
+            button.previousElementSibling.disabled = false;
+            __log('Stopped recording.');
+            // create WAV download link using audio data blob
+            createDownloadLink();
+            recorder.clear();
+     
+        }
+
+        function discard() {
+            document.getElementById("recordingslist").innerHTML = "<br/>(File has been discarded)";
+            var c = parseInt(document.getElementById('wordcount').innerHTML);
+            document.getElementById('wordcount').innerHTML = c-1;
+            document.getElementById("nextButton").disabled = false;
+            if (currentFileName != "") {
+                var storageRef = firebase.storage().ref('sadman/');
+                var discardRef = storageRef.child(currentFileName);
+                
+                //console.log('hi '+currentFileName);
+                // Delete the file from storage
+                discardRef.delete().then(function () {
+                    console.log("file discarded");
+                    document.getElementById("recordingslist").innerHTML = "";
+                }).catch(function (error) {
+                    console.log("error occurred");
+                });
+
+                // Delete the file from database
+
+                var ref = firebase.database().ref();
+                var userId = firebase.auth().currentUser.uid;
+                var mainKey = "sadman/users/"+userId+"/files/"+index+"/";
+
+                var urlRef = ref.child("sadman/users/"+userId+"/files/"+index);
+                urlRef.once("value", function(snapshot) {
+                    snapshot.forEach(function(child) {
+                        if(child.val()==currentFileName)
+                            {
+                                console.log(child.key+": "+child.val());
+                                ref.child(mainKey+child.key).remove();
+                            }
+                //console.log(child.key+": "+child.val());
+                    });
+                });
+
+
+            }
+
+        }
+
+         function createDownloadLink() {
+            console.log("Download Index "+index);
+            recorder && recorder.exportWAV(function (blob) {
+                var url = URL.createObjectURL(blob);
+                var li = document.createElement('li');
+                var au = document.createElement('audio');
+                var hf = document.createElement('a');
+                
+                //var filename = index + "_" + new Date().toISOString() + '.wav';
+                userId = firebase.auth().currentUser.uid;
+                //var filename = index + "_" + new Date().toISOString() + "_"+userId;
+                var filename = index + "_"+userId+"_"+new Date().toISOString();
+                currentFileName = filename;
+                writeFileToUser(currentFileName);
+                au.controls = true;
+                au.src = url;
+                hf.href = url;
+                hf.download = filename;
+                hf.innerHTML = hf.download;
+                
+                li.appendChild(au);
+                //li.appendChild(hf);
+                
+                var dlStatus=document.createElement("b");
+                dlStatus.id="upload_status";
+                dlStatus.innerHTML="<br/><b style='font-size:20px'>File Recorded Successfully</b><br/>";
+                
+                var c = parseInt(document.getElementById('wordcount').innerHTML);
+                document.getElementById('wordcount').innerHTML = c+1;
+                
+                li.appendChild(dlStatus);
+                document.getElementById("nextButton").disabled = false;
+                document.getElementById("startRecordingButton").disabled = false;
+                var button = document.createElement('button');
+                button.className="'btn btn-info btn-md custom'"
+                button.onclick = discard;
+                button.innerHTML = "discard";
+                li.appendChild(button);
+                document.getElementById("recordingslist").innerHTML = "";
+                document.getElementById("recordingslist").appendChild(li);
+                var storageRef = firebase.storage().ref('sadman/');
+                var voiceRef = storageRef.child(filename);
+                //var voiceSoundRef = storageRef.child('sounds/'+filename);
+                voiceRef.put(blob).then(function (snapshot) {
+                    console.log('Uploaded a blob or file!');
+                    document.getElementById("upload_status").innerHTML= "<br><b style='font-size:20px'>File Recorded Successfully</b><br/>";
+                });
+
+                var storageRef2 = firebase.storage().ref('sadman_faulty/');
+                var voiceRef2 = storageRef2.child('f_'+filename);
+                voiceRef2.put(blob).then(function(snapshot)
+                {
+                    console.log('Uploaded a blob or file!');
+                    document.getElementById("upload_status").innerHTML= "<br><b style='font-size:20px'>File Recorded Successfully</b><br/>";
+                    
+                    
+                    
+                });
+                // document.getElementById("nextButton").disabled = false;
+
+                                //next();
+
+            });
+            
+        }
+
+
+        function __log(e, data) {
+        }
+
+        var audio_context;
+        var recorder;
+
+        window.onload = function init() {
+            try {
+                // webkit shim
+                window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia;
+                window.URL = window.URL || window.webkitURL;
+
+                audio_context = new AudioContext;
+                __log('Audio context set up.');
+                __log('navigator.getUserMedia ' + (navigator.getUserMedia ? 'available.' : 'not present!'));
+            } catch (e) {
+                alert('No web audio support in this browser!');
+            }
+            $('#myModal').modal('show');
+            navigator.getUserMedia = (navigator.getUserMedia ||
+                navigator.webkitGetUserMedia ||
+                navigator.mozGetUserMedia ||
+                navigator.msGetUserMedia);
+
+            navigator.getUserMedia({audio: true}, startUserMedia, function (e) {
+                __log('No live audio input: ' + e);
+            });
+            
+            
+            firebase.auth().onAuthStateChanged(function(user){
+                if(user)
+                {
+
+                    var count = 0;
+                    userId = user.uid;
+                    console.log(userId);
+                    var lb = "leaderboard";
+                    firebase.database().ref('/sadman/leaderboard/'+userId).once('value').then(function(datasnapshot){
+                        var count = datasnapshot.val();
+                        count = count+1;
+                        count = count-1;
+                        console.log(count);
+                        document.getElementById('wordcount').innerHTML = toString(count);
+                        var wc = document.getElementById('wordcount');
+                        wc.innerHTML = count;
+                    });
+                    
+                }
+            });
+
+        };
+    </script>
+
+
+</head>
+<!-- End of Head -->
+
+<body  style='background: linear-gradient(rgba(0, 0, 255, 0), rgba(0, 100, 200, 0.2));height: 100%;
+    margin: 0;
+    background-repeat: no-repeat;
+    background-attachment: fixed;'>
+<!-- Menu -->
+    
+    <nav class="navbar navbar-inverse">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand active" href="#">Bangla Word Learner</a>
+        </div>
+        <ul class="nav navbar-nav"  style="float: right">
+          <li ><a data-toggle="modal" data-target='#myModal2' style='cursor: pointer'>নির্দেশাবলী</a></li>
+          <li><a href="#" onclick="logout()">লগ আউট</a></li>
+        </ul>
+      </div>
+    </nav>
+
+<!-- Menu -->
+
+    <div style="padding-left:5.5vw;padding-right: 5.5vw; text-align: center; background:rgba(0,0,0,0);" >
+        <p style="font-size: 20px; text-align: center; color:#5BC0DE;" ><strong>নির্দেশাবলী</strong></p>
+        <p style="font-size: 15px;" ><strong>"রেকর্ডিং শুরু করুন" বাটনে চাপুন এবং বিপ টোন শোনার জন্য অপেক্ষা করুন। বিপ টোন শোনার সাথে সাথে আপনার রেকর্ডিং শুরু করুন। প্রতিটি রেকর্ডিং ২ সেকেন্ড দৈর্ঘ্যের, 'প্লে' বাটনে ক্লিক করে চেক করে দেখতে পারেন রেকর্ডিং ঠিক আছে কিনা। সমস্যা মনে হলে 'ডিস্কার্ড' বাটনে ক্লিক করে ফাইলটি মুছে পুনরায় রেকর্ড করুন। নতুন শব্দ বলার জন্য 'পরবর্তী শব্দ' বাটনে ক্লিক করুন।</strong></p>
+        <p style="font-size: 1.2vw;" ></p>
+    </div>
+    
+<!-- Show the Button -->
+<section id="newsletter">
+    <div class="container" style="text-align: center;margin-bottom: 1vw">
+        <hr>
+        <div style='text-align: center;margin: 2vw;'>
+            <p style="font-size:15px ">শব্দটি বলুন:</p>
+            <div id="showText" style="color:black;font-size: 40px"></div>
+        </div>
+        <div class="one" style="text-align: center;">
+            <button id="nextButton" data-toggle="tooltip" title="পরবর্তী বাক্যটির জন্য চাপ দিন " onclick="next();" class="btn btn-info btn-md custom"> পরবর্তী শব্দ
+            </button>
+            <button id="startRecordingButton" data-toggle="tooltip"  title="রেকর্ডিং শুরু করতে চাপ দিন  "
+                    onclick="startRecording(this); " class="btn btn-info btn-md custom" >রেকর্ডিং শুরু করুন
+            </button>
+            <button id="stopRecordingButton" data-toggle="tooltip" title="রেকর্ডিং শেষ করতে চাপ দিন   "
+                    onclick="stopRecording(this);" class="btn btn-info btn-md custom" style="display:none" disabled>Stop Recording
+            </button>
+            <!-- <button type="submit" class="button_1">Subscribe</button> -->
+            <!-- <button  id="button" data-toggle="tooltip" title="Popover title by Aariyan">Click to toggle popover</button> -->
+            
+            <p style='font-size: 18px'>Word Count: <b id='wordcount'></b></p>
+        </div>
+        <h3 id="status"></h3>
+    </div>
+</section>
+<!-- Show the Three Button -->
+<!--
+<div id='rec_notice' style="display:center;text-align: center;color:black;  font: 15px/1.5 Comic Sans MS, Helvetica,sans-serif; font-size: 25px;"
+<h2>
+<p>Press "Start Recording" and wait for the beep. After hearing the beep, start your recording. After making an audio record,wait until it finishes uploading.</p>
+<p>Natural environment is preferred but avoid too much noise and side talk for privacy reasons.</p>
+</div>
+</h2>
+</div>
+-->
+<!--  Log file and Recording List -->
+<section id="boxes" >
+    
+    <div class="container" >
+        <div class="box" style="margin-left: auto;margin-right: auto;text-align: center" >
+         
+            <!-- <ul style="list-style: none" id="recordingslist"></ul> -->
+            <ul class='tect-align:center;' id="recordingslist"></ul>
+
+    </div>
+
+</div>
+</section>
+<!--  End---->
+
+<!-- For information -->
+<!-- <i class="fa fa-info-circle" aria-hidden="true"> -->
+<div class="infoButton" style='top:90%;right:3%;position: fixed;'>
+    <button style='border-radius: 70%;display:none' class="btn btn-info btn-md custom" data-toggle="modal" data-target='#myModal2' title="ব্যবহার বিধি জানতে চাপ দিন ">Rules</button>
+</div>
+
+    
+    <div class="modal fade" id="myModal2" role="dialog">
+    <div class="modal-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">বিধিমালা</h4>
+        </div>
+        <div class="modal-body">
+            <p id="one">&#9999; <b>আপনার হেডফোনটি সংযোগ করুন এবং মাইক ব্যবহারের জন্য পারমিশন এনাবল করুন ( যদি আপনি ক্রোম ব্যবহারকারী হয়ে থাকেন )</b></p>
+            <p id="two">&#9999; <b>"রেকর্ডিং শুরু" বাটনটি চাপুন এবং বিপ শব্দটির জন্যে অপেক্ষা করুন।বিপ শব্দটি শোনার পর,প্রদর্শিত শব্দটি বলুন।</b></p>
+            <p id="three">&#9999; <b>প্রত্যেকটা রেকর্ডিং ২ সেকেন্ড দৈর্ঘ্যের।যখনই বিপ শুনবেন তখনি প্রদর্শিত শব্দটি বলুন।</b></p>
+            <p id="four">&#9999; <b>রেকর্ডিং শেষে আপনি অডিওটি বাজিয়ে শুনতে পারেন এবং সঠিক কিনা বিবেচনা করতে পারেন। আপনি চাইলে অডিওটি ফেলে দিয়ে একই শব্দের নতুন আরেকটি রেকর্ড করতে পারেন।</b></p>
+            <p id="six">&#9999; <b>প্রাকৃতিক পরিবেশ প্রত্যাশিত তবে অতিরিক্ত শব্দ এড়িয়ে চলুন রেকর্ডিং এর সময়। পার্শ্ব আলাপ পরিহার করুন।</b></p>
+            
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+    
+    
+    <div class="modal fade" id="myModal" role="dialog">
+    <div class="modal-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">নির্দেশাবলী</h4>
+        </div>
+        <div class="modal-body">
+            <font color="red">
+            <p id="three">&#9999; <b>আপনার হেডফোনটি সংযোগ করুন এবং মাইক ব্যবহারের জন্য পারমিশন এনাবল করুন ( যদি আপনি ক্রোম ব্যবহারকারী হয়ে থাকেন )</b></p></font>
+          <p >&#9999; <b>"রেকর্ডিং শুরু" বাটনটি চাপুন এবং বিপ শব্দটির জন্যে অপেক্ষা করুন।বিপ শব্দটি শোনার পর,প্রদর্শিত শব্দটি বলুন। </b></p>
+         <font color='red'><p >&#9999; <b>প্রত্যেকটা রেকর্ডিং ২ সেকেন্ড দৈর্ঘ্যের।যখনই বিপ শুনবেন তখনি প্রদর্শিত শব্দটি বলুন।</b></p></font>
+            <p id="one">&#9999; <b>রেকর্ডিং শেষে আপনি অডিওটি বাজিয়ে শুনতে পারেন এবং সঠিক কিনা বিবেচনা করতে পারেন। আপনি চাইলে অডিওটি ফেলে দিয়ে একই শব্দের নতুন আরেকটি রেকর্ড করতে পারেন।</b></p>
+            <p id="one">&#9999; <b>প্রাকৃতিক পরিবেশ প্রত্যাশিত তবে অতিরিক্ত শব্দ এড়িয়ে চলুন রেকর্ডিং এর সময়। পার্শ্ব আলাপ পরিহার করুন। </b></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">কাটুন</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+<script src="instruction/isomaric.js"></script>
+<!-- For information -->
+<script src="firebase_init_voicerecord.js"></script>
+
+<footer style="display:none">
+    <p>Bangla Word Learner, Copyright &copy; 2018</p>
+</footer>
+
+</body>
+<!-- End of Html -->
+
+</html>

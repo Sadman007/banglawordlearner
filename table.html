@@ -1,0 +1,21 @@
+<table style="position: relative;width: 40px;height: 20px;width:50%;font: 15px/1.5 Arial, Helvetica,sans-serif; font-size: 15px;" id="score-table">
+  <tr id="tr">
+    <th>Your total contribution:</th>
+ </table>
+
+
+ <script>
+    var database = firebase.database();
+    database.ref().once('value', function(snapshot){
+        if(snapshot.exists()){
+            var content = '';
+            snapshot.forEach(function(data){
+                var val = data.val();
+                content +='<tr>';
+                content += '<td>' + val.leaderboard + '</td>';
+                content += '</tr>';
+            });
+            $('#score-table').append(content);
+        }
+    });
+</script>
