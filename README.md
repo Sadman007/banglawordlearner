@@ -1,4 +1,4 @@
-# Bangla Word Learnr
+# Bangla Word Learner
 
 Credits / license
 -----------------
