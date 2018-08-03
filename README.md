@@ -1,4 +1,4 @@
-# voiceCollection
+# Bangla Word Learnr
 
 Credits / license
 -----------------
